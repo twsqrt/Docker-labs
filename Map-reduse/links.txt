@@ -1,0 +1,9 @@
+# Ramanujan
+https://en.wikipedia.org/wiki/Srinivasa_Ramanujan
+https://en.wikipedia.org/wiki/Ramanujan_theta_function
+
+# kek
+https://en.wikipedia.org/wiki/KEK
+
+# В конец файла необходимо поместить слово 'end'.
+end
