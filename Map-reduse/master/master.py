@@ -3,14 +3,15 @@ import socket
 import sys
 import time 
 
-if len(sys.argv) == 1:
+if len(sys.argv) < 3:
     print("master must have at least one slave")
     raise Exception()
 
 RECV_BUFF_SIZE = 100000
 
 pages = []
-for line in sys.stdin:
+pages_file = open(sys.argv[1], 'r')
+for line in pages_file.readlines():
     line = line.strip('\n')
     if line == '' or line[0] == '#':
         continue
@@ -47,7 +48,7 @@ class Slave:
     def close(self) -> None:
         self.__socket.close()
 
-addresses = sys.argv[1:]
+addresses = sys.argv[2:]
 slaves = [Slave(address) for address in addresses]
 words_count = {}
 
