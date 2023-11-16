@@ -1,23 +1,11 @@
-import json
 import socket
+import json
 import sys
 import time 
 
-if len(sys.argv) < 3:
-    print("master must have at least one slave")
-    raise Exception()
+RECV_BUFF_SIZE = 100 * 1024
+NUMBER_OF_TOP_LIST = 30
 
-RECV_BUFF_SIZE = 100000
-
-pages = []
-pages_file = open(sys.argv[1], 'r')
-for line in pages_file.readlines():
-    line = line.strip('\n')
-    if line == '' or line[0] == '#':
-        continue
-    if line == 'end':
-        break
-    pages.append(line)
 
 class Slave:
     def __init__(self, address: str):
@@ -26,76 +14,100 @@ class Slave:
         sock.connect((host, int(port)))
         sock.setblocking(False)
         self.__socket = sock
-        self.__is_free = True
+        self.__is_working = False
+        self.__has_result = False
+        self.__current_result_dict = None
 
-    def is_free(self) -> bool:
-        return self.__is_free
+    def get_is_working_flag(self) -> bool:
+        return self.__is_working
     
+    def get_has_result_flag(self) -> bool:
+        return self.__has_result
+    
+    is_working = property(get_is_working_flag)
+    has_result = property(get_has_result_flag)
+
     def send_page(self, page: str) -> None:
+        if self.__is_working:
+            raise Exception('Slave is working right now!')
         self.__socket.send(bytes(page, 'utf-8'))
-        self.__is_free = False
-    
-    def get_result(self) -> list:
-        if self.__is_free:
-            return None
+        self.__has_result = False
+        self.__is_working = True
+
+    def status_update(self) -> bool:
         try:
             data = self.__socket.recv(RECV_BUFF_SIZE)
         except BlockingIOError:
-            return None
-        self.__is_free = True
-        return json.loads(data.decode('utf-8'))
+            return False
+        self.__current_result_dict =  json.loads(data.decode('utf-8'))
+        self.__has_result = True
+        self.__is_working = False
+        return True
+
+    def get_result(self) -> dict:
+        if self.__has_result:
+            return self.__current_result_dict
+        return None
     
     def close(self) -> None:
         self.__socket.close()
 
-addresses = sys.argv[2:]
-slaves = [Slave(address) for address in addresses]
-words_count = {}
 
-def get_free_slave() -> Slave:
-    for slave in slaves:
-        if slave.is_free():
-            return slave
-    return None
-
-def all_slaves_free() -> bool:
+def all_slaves_free(slaves: list):
     for slave in slaves:
         if not slave.is_free():
             return False
     return True
 
-def add_words_count(slave_words_count: dict) -> None:
-    for word, count in slave_words_count.items():
-        if word in words_count:
-            words_count[word] += count
+def add_words_rate(to_dict: dict, from_dict: dict) -> None:
+    for word, count in from_dict.items():
+        if word in to_dict:
+            to_dict[word] += count
         else:
-            words_count[word] = count
-
-def update_words_count() -> None:
-    for slave in slaves:
-        slave_words_count = slave.get_result()
-        if slave_words_count is not None:
-            add_words_count(slave_words_count)
-
-while len(pages) > 0:
-    update_words_count()
-    slave = get_free_slave()
-    if slave is not None:
-        page = pages.pop()
-        print(f'send page: {page}')
-        slave.send_page(page)
-    time.sleep(1)
-    
-while not all_slaves_free():
-    update_words_count()
-    time.sleep(1)
-
-for slave in slaves:
-    slave.close()
+            to_dict[word] = count
 
 
-number_of_top_list = 30
+if __name__ == '__main__':
+    if len(sys.argv) < 3:
+        raise Exception('Master musl have at least one slave!')
 
-print('result:')
-for word, count in sorted(words_count.items(), key = lambda x: -x[1])[:number_of_top_list]:
-    print(f'{word}\t matches:{count}')
+    addresses = sys.argv[2:]
+    slaves = [Slave(address) for address in addresses]
+    words_rate_dict = {}
+
+    pages = []
+    pages_file = open(sys.argv[1], 'r', encoding='utf-8')
+    for line in pages_file.readlines():
+        line = line.strip('\n')
+        if line == '' or line[0] == '#':
+            continue
+        if line == 'end':
+            break
+        pages.append(line)
+
+    while len(pages) > 0:
+        for slave in slaves:
+            slave.status_update()
+            if slave.has_result:
+                result_dict = slave.get_result()
+                add_words_rate(words_rate_dict, result_dict)
+            if not slave.is_working and len(pages) > 0:
+                page = pages.pop()
+                slave.send_page(page)
+                print(f'send page: {page}')
+        time.sleep(0.2)
+        
+    while len(slaves) > 0:
+        for slave in slaves:
+            slave.status_update()
+            if slave.has_result:
+                result_dict = slave.get_result()
+                add_words_rate(words_rate_dict, result_dict)
+                slave.close()
+                slaves.remove(slave)
+        time.sleep(0.2)
+
+    print('result:')
+    sorted_word_rate_dict = sorted(words_rate_dict.items(), key=lambda x: x[1], reverse=True) 
+    for word, count in sorted_word_rate_dict[:NUMBER_OF_TOP_LIST]:
+        print(f'{word}\t matches:{count}')
