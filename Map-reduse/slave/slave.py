@@ -9,6 +9,12 @@ from textblob import TextBlob
 
 RECV_BUFF_SIZE = 512
 
+def check_ascii_encoding(word: str) -> bool:
+    for _, char in enumerate(word):
+        if ord(char) > 127:
+            return False
+    return True
+
 def get_words_rate_on_page(url: str) -> dict:
     request_result = requests.get(url)
     if request_result.status_code == 200:
@@ -20,7 +26,7 @@ def get_words_rate_on_page(url: str) -> dict:
             for word in TextBlob(text_to_parse).words:
                 if word in words_rate:
                     words_rate[word] += 1
-                else:
+                elif check_ascii_encoding(word):
                     words_rate[word] = 1
         return words_rate
     return None
@@ -45,4 +51,4 @@ if __name__ == '__main__':
         print(f'recived page: {url}')
         words_count = get_words_rate_on_page(url)
         conn.send(bytes(json.dumps(words_count), 'utf-8'))
-        time.sleep(1.0)
+        time.sleep(0.2)
