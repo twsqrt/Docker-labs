@@ -3,6 +3,7 @@ import json
 import socket
 import sys
 import time
+import argparse
 
 from bs4 import BeautifulSoup
 from textblob import TextBlob
@@ -30,15 +31,18 @@ def get_words_rate_on_page(url: str) -> dict:
                     words_rate[word] = 1
         return words_rate
     return None
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-p', '--port', required=True, type=int)
+    return parser.parse_args()
+
     
 if __name__ == '__main__':
-    if len(sys.argv) != 2:
-        raise Exception()
-
-    port = int(sys.argv[1])
+    args = parse_args()
 
     sock = socket.socket()
-    sock.bind(('', port))
+    sock.bind(('', args.port))
     sock.listen(1)
 
     conn, _ = sock.accept()

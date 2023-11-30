@@ -2,12 +2,12 @@
 
 # Запускаем svale-ов.
 # В качестве параметра передаём номер порта, через который будет происходить взаимодействие.
-docker run -d --net=map-reduse-net --net-alias=first map-reduse:slave 8080
-docker run -d --net=map-reduse-net --net-alias=second map-reduse:slave 8080
+docker run -d --net=map-reduse-net --net-alias=first map-reduse:slave --port 8080
+docker run -d --net=map-reduse-net --net-alias=second map-reduse:slave --port 8080
 
 # Запускаем master-а.
 # Передаём в качестве параметров адреса slave-ов в докер сети.
-docker run --net=map-reduse-net map-reduse:master first:8080 second:8080
+docker run --net=map-reduse-net map-reduse:master --top_count 30 --slaves first:8080 second:8080
 
 # Результат работы master-а:
 
