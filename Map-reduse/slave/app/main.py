@@ -16,8 +16,8 @@ def check_ascii_encoding(word: str) -> bool:
             return False
     return True
 
-def get_words_rate_on_page(url: str) -> dict:
-    request_result = requests.get(url)
+def get_words_rate_on_page(link: str) -> dict:
+    request_result = requests.get(link)
     if request_result.status_code == 200:
         page = BeautifulSoup(request_result.text, 'html.parser')
         content = page.find('div', id='mw-content-text')
@@ -51,8 +51,8 @@ if __name__ == '__main__':
         data = conn.recv(RECV_BUFF_SIZE)
         if data == b'':
             break
-        url = data.decode('utf-8')
-        print(f'recived page: {url}')
-        words_count = get_words_rate_on_page(url)
+        link = data.decode('utf-8')
+        print(f'recived link: {link}')
+        words_count = get_words_rate_on_page(link)
         conn.send(bytes(json.dumps(words_count), 'utf-8'))
         time.sleep(0.2)

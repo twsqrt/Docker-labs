@@ -19,10 +19,10 @@ class SlaveSocket:
     def has_result(self) -> bool:
         return self.__current_result_dict != None
     
-    def send_page(self, page: str) -> None:
+    def send_link(self, link: str) -> None:
         if self.__is_working:
             raise Exception('Slave is working right now!')
-        self.__socket.send(bytes(page, 'utf-8'))
+        self.__socket.send(bytes(link, 'utf-8'))
         self.__current_result_dict = None
         self.__is_working = True
 

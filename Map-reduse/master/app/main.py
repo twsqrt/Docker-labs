@@ -31,23 +31,23 @@ def parse_links(links_file_path: str) -> list:
 def main() -> None:
     args = parse_args()
 
-    pages = list(parse_links(args.links_file_path))
+    links = list(parse_links(args.links_file_path))
     slaves = [slv.SlaveSocket(address) for address in args.slave_addresses]
     buffer = rd.RateDict()
     database = db.WordRateDB(args.db_path, args.db_files_count)
 
-    while len(pages) > 0 or len(slaves) > 0:
+    while len(links) > 0 or len(slaves) > 0:
         for slave in slaves:
             slave.update()
             if slave.has_result():
                 buffer.add_dict(slave.take_result())
-                if len(pages) == 0:
+                if len(links) == 0:
                     slave.close()
                     slaves.remove(slave)
-            if not slave.is_working() and len(pages) > 0:
-                page = pages.pop()
-                slave.send_page(page)
-                print(f'send page: {page}')
+            if not slave.is_working() and len(links) > 0:
+                link = links.pop()
+                slave.send_link(link)
+                print(f'send link: {link}')
         if len(buffer) > args.buffer_size_limit:
             database.dump(buffer)
             buffer.clear()
