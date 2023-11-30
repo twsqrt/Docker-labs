@@ -3,4 +3,4 @@ FROM python
 WORKDIR /master
 COPY . /master
 
-ENTRYPOINT ["python", "master.py", "links.txt"]
+ENTRYPOINT ["python", "app/main.py", "links.txt"]

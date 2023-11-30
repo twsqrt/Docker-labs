@@ -10,6 +10,7 @@ MAX_WORDS_RATE_DICT_SIZE = 100
 NUMBER_OF_TOP_LIST = 30
 NUMBER_OF_DATA_FILES = 10
 DATA_PATH_FORMAT = 'data/{0}.txt'
+TEMP_DATA_PATH_FORMAT = 'data/~{0}.txt'
 
 class Slave:
     def __init__(self, address: str):
@@ -79,26 +80,44 @@ def split_words_rate_by_hash(words_rate_dict: dict) -> dict:
         words_rate_by_hash[file_id][word] = rate
     return words_rate_by_hash
 
+def add_words_rate_to_file(file_id: int, words_rate: dict) -> None:
+    temp_file_path = TEMP_DATA_PATH_FORMAT.format(file_id)
+    file_path = DATA_PATH_FORMAT.format(file_id)
+    with open(temp_file_path, 'w') as write_file:
+        with open(file_path, 'r') as read_file:
+           for line in read_file:
+                word, rate_str = line.split(' ')
+                rate = int(rate_str)
+                if word in words_rate:
+                    write_file.write(f'{word} {rate + words_rate[word]}\n')
+                    del words_rate[word] 
+                else:
+                    write_file.write(line)
+        for word, rate in words_rate.items():
+            write_file.write(f'{word} {rate}\n')
+    os.remove(file_path)
+    os.rename(temp_file_path, file_path)
+
 def dump_wrods_rate(words_rate_dict: dict) -> None:
     words_rate_by_hash = split_words_rate_by_hash(words_rate_dict)
     for file_id, words_rate in words_rate_by_hash.items():
-        file_words_rate = {}
-        with open(DATA_PATH_FORMAT.format(file_id), 'r') as file:
-            for line in file:
-                word, rate_str = line.split(' ')
-                file_words_rate[word] = int(rate_str)
-        add_words_rate(file_words_rate, words_rate)
-        with open(DATA_PATH_FORMAT.format(file_id), 'w') as file:
-            for word, rate in sorted(file_words_rate.items(), key=lambda x: x[1], reverse=True):
-                file.write('{w} {r}\n'.format(w=word, r=rate))
+        add_words_rate_to_file(file_id, words_rate)
 
 def get_file_top_words_rate(file_id: int, number_of_top: int) -> dict:
+    top_words_rate = {}
     with open(DATA_PATH_FORMAT.format(file_id), 'r') as file:
-        file_top_words_rate = {}
-        for _ in range(0, number_of_top):
-            word, rate_str = next(file).split(' ')
-            file_top_words_rate[word] = int(rate_str)
-        return file_top_words_rate
+        min_rate = 1
+        for line in file:
+            word, rate_str = line.split(' ')
+            rate = int(rate_str)
+            if rate > min_rate:
+                top_words_rate[word] = rate
+                if len(top_words_rate) > number_of_top:
+                    top_words_rate_sorted_list = sorted(top_words_rate.items(), key=lambda x: x[1], reverse=True)
+                    top_words_rate_sorted_list.pop()
+                    min_rate = top_words_rate_sorted_list[-1][1]
+                    top_words_rate = dict(top_words_rate_sorted_list)
+    return top_words_rate
 
 if __name__ == '__main__':
     if len(sys.argv) < 3:
