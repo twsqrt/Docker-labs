@@ -5,6 +5,7 @@ import config
 import slave as slv
 import ratedict as rd
 import database as db
+import toplist as tl
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -32,6 +33,13 @@ def parse_links(links_file_path: str) -> list:
             yield line
 
 
+def get_top(database: db.WordRateDB, top_count: int) -> list:
+    top_list = tl.TopList(top_count, key=lambda p: p[1])
+    for word_rate_pair in database.items():
+        top_list.add(word_rate_pair)
+    return top_list.get_top()
+        
+
 def main() -> None:
     args = parse_args()
 
@@ -58,7 +66,7 @@ def main() -> None:
             print('created memory dump!')
         time.sleep(0.2)
     
-    for word, rate in database.get_top(args.top_count):
+    for word, rate in get_top(database, args.top_count):
         print(f'{word}\t {rate}')
     
 

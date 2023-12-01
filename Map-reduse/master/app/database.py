@@ -2,7 +2,6 @@ import os
 import glob
 
 import ratedict as rd
-import toplist as tl
 
 FILE_NAME_FORMAT = 'part_{0}.txt'
 DATA_FORMAT = '{0} {1}\n'
@@ -16,6 +15,10 @@ class WordRateDB:
         self.clear()
         for i in range(0, number_of_files):
             open(self.__file_path_format.format(i), 'a').close()
+    
+    def __parse_data(self, line: str) -> tuple:
+        word, rate_str = line.split(SPLIT_DATA_SYMBOL)
+        return (word, int(rate_str))
 
     def __split_data_by_hash(self, words_rate: rd.RateDict) -> list:
         words_rate_by_hash = [{} for _ in range(0, self.__number_of_files)]
@@ -28,8 +31,7 @@ class WordRateDB:
         temp_file = file_path + '.temp'
         with open(temp_file, 'w') as new_file, open(file_path, 'r') as old_file:
             for line in old_file:
-                word, rate_str = line.split(SPLIT_DATA_SYMBOL)
-                rate = int(rate_str)
+                word, rate = self.__parse_data(line)
                 if word in new_words_rate:
                     new_file.write(
                         DATA_FORMAT.format(word, rate + new_words_rate[word])
@@ -52,19 +54,9 @@ class WordRateDB:
         for file in glob.glob(self.__file_path_format.format('*')):
             os.remove(file)
     
-    def __get_top_in_file(self, file_path: str, top_count: int) -> list:
-        top_list = tl.TopList(top_count, key=lambda p: p[1])
-        with open(file_path, 'r') as file:
-            for line in file:
-                word, rate_str = line.split(SPLIT_DATA_SYMBOL)
-                rate = int(rate_str)
-                top_list.add((word, rate))
-        return top_list.get_top()
-    
-    def get_top(self, top_count: int) -> list:
-        top_list = tl.TopList(top_count, key=lambda p: p[1])
+    def items(self):
         for file_id in range(0, self.__number_of_files):
             file_path = self.__file_path_format.format(file_id)
-            file_top_list = self.__get_top_in_file(file_path, top_count)
-            top_list.add_list(file_top_list)
-        return top_list.get_top()
+            with open(file_path, 'r') as file:
+                for line in file:
+                    yield self.__parse_data(line)
