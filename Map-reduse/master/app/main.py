@@ -1,7 +1,7 @@
-import sys
 import argparse
 import time 
 
+import config
 import slave as slv
 import ratedict as rd
 import database as db
@@ -10,9 +10,13 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--links_file', type=str, required=True, dest='links_file_path')
     parser.add_argument('--db_path', type=str, required=True)
-    parser.add_argument('--db_files_count', type=int, default=10)
-    parser.add_argument('--top_count', type=int, default=10)
-    parser.add_argument('--buffer_size_limit', type=int, default=500)
+    parser.add_argument('--db_files_count', type=int, 
+        default=config.default_db_file_count
+    )
+    parser.add_argument('--top_count', type=int, default=config.default_top_count)
+    parser.add_argument('--buffer_size_limit', type=int, 
+        default=config.default_buffer_size_limit
+    )
     parser.add_argument('-s', '--slaves', type=str, nargs='+', dest='slave_addresses')
     return parser.parse_args()
 
