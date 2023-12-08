@@ -48,7 +48,7 @@ def main() -> None:
         for slave in slaves:
             slave.update()
             if slave.has_result():
-                buffer.add_dict(slave.take_result())
+                buffer.add_rate_dict(slave.take_result())
                 if len(links) == 0:
                     slave.close()
                     slaves.remove(slave)
@@ -57,18 +57,22 @@ def main() -> None:
                 slave.send_link(link)
                 print(f'send link: {link}')
         if len(buffer) > args.buffer_size_limit:
-            sorted_buffer_items = sorted(buffer.items(), 
+            sorted_items = sorted(buffer.items(), 
                 key=lambda p: p[1], 
                 reverse=True
             )
-            database.dump(sorted_buffer_items[args.buffer_cache_size:])
-            buffer = rd.RateDict(dict(sorted_buffer_items[:args.buffer_cache_size]))
+            database.dump(sorted_items[args.buffer_cache_size:])
+            buffer.clear()
+            buffer.update(sorted_items[:args.buffer_cache_size])
             print('created memory dump!')
         time.sleep(0.2)
     
     top_list = tl.TopList(args.top_count, lambda p: p[1])
-    for word_rate_pair in database.items():
-        top_list.add(word_rate_pair)
+    for word, rate in database.items():
+        if word in buffer:
+            rate += buffer[word]
+            del buffer[word]
+        top_list.add((word, rate))
     top_list.add_list(buffer.items())
 
     for word, rate in top_list.get_top():
