@@ -18,6 +18,9 @@ def parse_args():
     parser.add_argument('--buffer_size_limit', type=int, 
         default=config.default_buffer_size_limit
     )
+    parser.add_argument('--buffer_cache_size', type=int, 
+        default=config.default_buffer_cache_size
+    )
     parser.add_argument('-s', '--slaves', type=str, nargs='+', dest='slave_addresses')
     return parser.parse_args()
 
@@ -32,13 +35,6 @@ def parse_links(links_file_path: str) -> list:
                 break
             yield line
 
-
-def get_top(database: db.WordRateDB, top_count: int) -> list:
-    top_list = tl.TopList(top_count, key=lambda p: p[1])
-    for word_rate_pair in database.items():
-        top_list.add(word_rate_pair)
-    return top_list.get_top()
-        
 
 def main() -> None:
     args = parse_args()
@@ -61,12 +57,21 @@ def main() -> None:
                 slave.send_link(link)
                 print(f'send link: {link}')
         if len(buffer) > args.buffer_size_limit:
-            database.dump(buffer)
-            buffer.clear()
+            sorted_buffer_items = sorted(buffer.items(), 
+                key=lambda p: p[1], 
+                reverse=True
+            )
+            database.dump(sorted_buffer_items[args.buffer_cache_size:])
+            buffer = rd.RateDict(dict(sorted_buffer_items[:args.buffer_cache_size]))
             print('created memory dump!')
         time.sleep(0.2)
     
-    for word, rate in get_top(database, args.top_count):
+    top_list = tl.TopList(args.top_count, lambda p: p[1])
+    for word_rate_pair in database.items():
+        top_list.add(word_rate_pair)
+    top_list.add_list(buffer.items())
+
+    for word, rate in top_list.get_top():
         print(f'{word}\t {rate}')
     
 

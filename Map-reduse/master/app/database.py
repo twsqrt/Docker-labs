@@ -20,9 +20,9 @@ class WordRateDB:
         word, rate_str = line.split(SPLIT_DATA_SYMBOL)
         return (word, int(rate_str))
 
-    def __split_data_by_hash(self, words_rate: rd.RateDict) -> list:
+    def __split_data_by_hash(self, words_rate_items: list) -> list:
         words_rate_by_hash = [{} for _ in range(0, self.__number_of_files)]
-        for word, rate in words_rate.items():
+        for word, rate in words_rate_items:
             index = hash(word) % self.__number_of_files
             words_rate_by_hash[index][word] = rate
         return words_rate_by_hash
@@ -44,8 +44,8 @@ class WordRateDB:
         os.remove(file_path)
         os.rename(temp_file, file_path)
 
-    def dump(self, words_rate: rd.RateDict) -> None:
-        words_rate_by_hash = self.__split_data_by_hash(words_rate)
+    def dump(self, words_rate_items: list) -> None:
+        words_rate_by_hash = self.__split_data_by_hash(words_rate_items)
         for file_id in range(0, self.__number_of_files):
             file_path = self.__file_path_format.format(file_id)
             self.__add_data_to_file(file_path, words_rate_by_hash[file_id]) 

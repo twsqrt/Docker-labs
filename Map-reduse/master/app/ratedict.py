@@ -1,14 +1,10 @@
 from __future__ import annotations
 import json
 
-class RateDict:
+class RateDict(dict):
     def __init__(self, rate: dict = {}):
         self.__rate = rate
 
-    @classmethod
-    def create_from_json(data: str) -> RateDict:
-        return RateDict(json.loads(data))
-    
     def __len__(self) -> int:
         return len(self.__rate)
 
